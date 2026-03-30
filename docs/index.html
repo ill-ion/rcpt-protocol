@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RCPT Docs — rcpt.dev</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0a0b0d; --surface:#111318; --surface2:#181b22; --border:#1e222b; --text:#e8eaed; --dim:#8a8f9d; --muted:#555b6e; --accent:#4af0c0; --blue:#5b9cf5; --orange:#f5a05b; --mono:'JetBrains Mono',monospace; --serif:'Source Serif 4',Georgia,serif; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.7}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+
+    .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+    /* Sidebar */
+    .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar-logo{padding:0 24px 24px;font-size:16px;font-weight:700;letter-spacing:.1em;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:16px}
+    .sidebar-logo span{color:var(--dim);font-weight:400;font-size:12px}
+    .nav-section{padding:8px 24px 4px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-top:12px}
+    .nav-link{display:block;padding:6px 24px;font-size:13px;color:var(--dim);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+    .nav-link:hover{color:var(--text);background:var(--surface2);text-decoration:none}
+    .nav-link.active{color:var(--accent);border-left-color:var(--accent);background:rgba(74,240,192,.04)}
+
+    /* Main */
+    .main{padding:48px 64px;max-width:800px}
+    .main h1{font-family:var(--serif);font-size:32px;font-weight:600;margin-bottom:8px}
+    .main h2{font-family:var(--serif);font-size:22px;font-weight:600;margin:40px 0 16px;padding-top:20px;border-top:1px solid var(--border)}
+    .main h3{font-size:16px;font-weight:600;margin:28px 0 12px;color:var(--accent)}
+    .main p{margin-bottom:16px;color:var(--dim);line-height:1.8}
+    .main ul,.main ol{margin-bottom:16px;padding-left:24px;color:var(--dim)}
+    .main li{margin-bottom:6px}
+    .main strong{color:var(--text)}
+    .main code{background:var(--surface2);padding:2px 6px;border-radius:2px;font-size:13px;color:var(--accent)}
+    .main pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:20px;overflow-x:auto;font-size:13px;line-height:1.8}
+    .main pre code{background:none;padding:0;color:var(--text)}
+    .badge{display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;letter-spacing:.04em;border-radius:2px;text-transform:uppercase}
+    .badge-py{color:var(--blue);background:rgba(91,156,245,.1)}
+    .badge-ts{color:var(--orange);background:rgba(245,160,91,.1)}
+    .badge-cli{color:var(--accent);background:rgba(74,240,192,.1)}
+
+    .page{display:none}.page.active{display:block}
+
+    table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px}
+    th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+    td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--dim)}
+
+    @media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.main{padding:24px}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-logo">RCPT <span>Docs</span></div>
+
+      <div class="nav-section">Getting Started</div>
+      <a class="nav-link active" onclick="show('quickstart')">Quick Start</a>
+      <a class="nav-link" onclick="show('concepts')">Core Concepts</a>
+      <a class="nav-link" onclick="show('cli')">CLI Reference</a>
+
+      <div class="nav-section">Python SDK</div>
+      <a class="nav-link" onclick="show('py-client')">RCPTClient</a>
+      <a class="nav-link" onclick="show('py-receipt')">Receipt</a>
+      <a class="nav-link" onclick="show('py-reputation')">Reputation</a>
+      <a class="nav-link" onclick="show('py-compliance')">Compliance</a>
+
+      <div class="nav-section">TypeScript SDK</div>
+      <a class="nav-link" onclick="show('ts-client')">RCPTClient</a>
+      <a class="nav-link" onclick="show('ts-receipt')">Receipt</a>
+      <a class="nav-link" onclick="show('ts-reputation')">Reputation</a>
+
+      <div class="nav-section">Integrations</div>
+      <a class="nav-link" onclick="show('int-langchain')">LangChain</a>
+      <a class="nav-link" onclick="show('int-openai')">OpenAI SDK</a>
+      <a class="nav-link" onclick="show('int-anthropic')">Anthropic SDK</a>
+      <a class="nav-link" onclick="show('int-crewai')">CrewAI</a>
+      <a class="nav-link" onclick="show('int-mcp')">MCP Server</a>
+      <a class="nav-link" onclick="show('int-fastapi')">FastAPI</a>
+
+      <div class="nav-section">Advanced</div>
+      <a class="nav-link" onclick="show('merkle')">Merkle Anchoring</a>
+      <a class="nav-link" onclick="show('solana')">Solana Program</a>
+      <a class="nav-link" onclick="show('euai')">EU AI Act</a>
+      <a class="nav-link" onclick="show('spec')">Specification</a>
+    </nav>
+
+    <main class="main" id="content">
+      <!-- Quick Start -->
+      <div class="page active" id="quickstart">
+        <h1>Quick Start</h1>
+        <p>Get RCPT running in 30 seconds. Generate your first signed receipt, verify it, and inspect the chain.</p>
+
+        <h2>Install</h2>
+        <h3>Python</h3>
+        <pre><code>pip install rcpt</code></pre>
+        <h3>TypeScript</h3>
+        <pre><code>npm install rcpt</code></pre>
+
+        <h2>Generate a Receipt</h2>
+        <h3>Python</h3>
+<pre><code>from rcpt import RCPTClient, ActionType
+
+client = RCPTClient()
+
+receipt = client.attest(
+    action_type=ActionType.INFERENCE,
+    output="The capital of France is Paris.",
+    model="claude-sonnet-4-5",
+)
+
+print(receipt.receipt_id)   # ULID
+print(receipt.agent_id)     # did:key:z6Mk...
+print(client.verify(receipt))  # True</code></pre>
+
+        <h3>TypeScript</h3>
+<pre><code>import { RCPTClient, ActionType } from 'rcpt';
+
+const client = new RCPTClient();
+
+const receipt = client.attest({
+  actionType: ActionType.INFERENCE,
+  output: "The capital of France is Paris.",
+  model: "claude-sonnet-4-5",
+});
+
+console.log(receipt.receipt_id);
+console.log(client.verify(receipt));  // true</code></pre>
+
+        <h3>CLI</h3>
+<pre><code>rcpt keygen
+rcpt attest "The capital of France is Paris." --model claude-sonnet-4-5
+rcpt verify receipt.json</code></pre>
+
+        <h2>Chain Receipts</h2>
+        <p>Link receipts together to create an audit trail of a multi-step workflow.</p>
+<pre><code>r1 = client.attest(
+    action_type=ActionType.INFERENCE,
+    output="Let me search for that.",
+)
+
+r2 = client.attest(
+    action_type=ActionType.TOOL_CALL,
+    output="API returned 42 results",
+    parent=r1.receipt_id,  # chain to r1
+)
+
+r3 = client.attest(
+    action_type=ActionType.INFERENCE,
+    output="Based on the search results...",
+    parent=r2.receipt_id,  # chain to r2
+)
+
+# Walk the chain
+chain = client.get_chain(r3.receipt_id)
+# [r1, r2, r3] — full audit trail</code></pre>
+
+        <h2>Verify</h2>
+        <p>Any party can verify a receipt using only the receipt JSON. No API key, no server, no trust required.</p>
+<pre><code># Different client, different machine — doesn't matter
+other = RCPTClient()
+assert other.verify(receipt)  # True — uses the DID in the receipt</code></pre>
+      </div>
+
+      <!-- Core Concepts -->
+      <div class="page" id="concepts">
+        <h1>Core Concepts</h1>
+        <p>The key ideas behind the RCPT protocol.</p>
+
+        <h2>Receipt</h2>
+        <p>A receipt is a signed JSON document that proves an AI agent took a specific action at a specific time. It contains 7 required fields and any number of optional fields.</p>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          <tr><td><code>rcpt_version</code></td><td>string</td><td>Protocol version ("0.1")</td></tr>
+          <tr><td><code>receipt_id</code></td><td>string</td><td>ULID — unique, sortable, timestamped</td></tr>
+          <tr><td><code>timestamp</code></td><td>string</td><td>ISO 8601 UTC with milliseconds</td></tr>
+          <tr><td><code>agent_id</code></td><td>string</td><td>DID of the signing agent</td></tr>
+          <tr><td><code>action_type</code></td><td>string</td><td>inference, tool_call, transaction, delegation, observation, custom</td></tr>
+          <tr><td><code>output_hash</code></td><td>string</td><td>SHA-256 hash of the output</td></tr>
+          <tr><td><code>signature</code></td><td>string</td><td>Ed25519 signature of the canonical body</td></tr>
+        </table>
+
+        <h2>Agent Identity</h2>
+        <p>An agent's identity is its Ed25519 public key, encoded as a W3C DID (<code>did:key:z6Mk...</code>). The keypair is generated locally — no registry, no server, no approval needed. The DID <strong>is</strong> the public key, so anyone can verify receipts signed by that agent.</p>
+
+        <h2>Chaining</h2>
+        <p>Receipts link to each other via <code>parent_receipt_id</code>, forming a chain that represents a complete workflow. Walking the chain backward from any receipt reconstructs the full decision path.</p>
+
+        <h2>Anchoring</h2>
+        <p>Batches of receipts are hashed into a Merkle tree. The root is published to Solana. Anyone can verify that a receipt existed at a specific time by checking its Merkle proof against the on-chain root — without trusting the receipt creator.</p>
+
+        <h2>Privacy</h2>
+        <p>Receipts contain hashes, never raw data. The actual input and output text never appears in the receipt. This makes RCPT GDPR-compatible — delete the source data and the receipt becomes an opaque proof with no recoverable content.</p>
+      </div>
+
+      <!-- CLI Reference -->
+      <div class="page" id="cli">
+        <h1>CLI Reference</h1>
+        <p>The <code>rcpt</code> command is installed automatically with the Python SDK.</p>
+<pre><code>pip install rcpt</code></pre>
+
+        <h2>Commands</h2>
+        <table>
+          <tr><th>Command</th><th>Description</th></tr>
+          <tr><td><code>rcpt keygen</code></td><td>Generate a new Ed25519 keypair</td></tr>
+          <tr><td><code>rcpt attest &lt;output&gt;</code></td><td>Generate a signed receipt</td></tr>
+          <tr><td><code>rcpt verify &lt;file&gt;</code></td><td>Verify receipt signature(s)</td></tr>
+          <tr><td><code>rcpt inspect &lt;file&gt;</code></td><td>Pretty-print receipt with verification</td></tr>
+          <tr><td><code>rcpt hash &lt;text&gt;</code></td><td>Compute SHA-256 hash</td></tr>
+          <tr><td><code>rcpt merkle &lt;file&gt;</code></td><td>Build Merkle tree from receipt array</td></tr>
+          <tr><td><code>rcpt compliance &lt;file&gt;</code></td><td>EU AI Act compliance check</td></tr>
+          <tr><td><code>rcpt reputation &lt;file&gt;</code></td><td>Compute agent reputation scores</td></tr>
+        </table>
+
+        <h2>Examples</h2>
+<pre><code># Generate a keypair
+rcpt keygen --json
+
+# Attest an action
+rcpt attest "Analyzed quarterly earnings" \
+  --model claude-sonnet-4-5 \
+  --type inference
+
+# Verify a receipt
+rcpt verify receipt.json
+
+# Pipe from stdin
+echo "Hello world" | rcpt attest - --type inference
+
+# Run compliance check
+rcpt compliance receipts.json --gaps-only
+
+# Reputation leaderboard
+rcpt reputation receipts.json --top 5</code></pre>
+      </div>
+
+      <!-- Python Client -->
+      <div class="page" id="py-client">
+        <h1>Python: RCPTClient</h1>
+        <p>The main entry point for the Python SDK.</p>
+
+<pre><code>from rcpt import RCPTClient, ActionType
+
+# New keypair (default)
+client = RCPTClient()
+
+# Persistent identity
+client = RCPTClient(private_key="base64url:...")
+
+# With SQLite storage
+client = RCPTClient(store="sqlite:///receipts.db")</code></pre>
+
+        <h2>attest()</h2>
+        <p>Generate a signed receipt.</p>
+<pre><code>receipt = client.attest(
+    action_type=ActionType.INFERENCE,
+    output="Response text",
+    input_data="User prompt",        # optional — hashed
+    model="claude-sonnet-4-5",       # optional — auto-detects provider
+    parent=previous_receipt_id,       # optional — chains receipts
+    workflow_id="wf-123",            # optional — groups a workflow
+    metadata={"description": "...", "tags": ["tag1"]},
+)</code></pre>
+
+        <h2>verify()</h2>
+        <p>Verify a receipt's Ed25519 signature. Works with Receipt objects, JSON strings, or dicts.</p>
+<pre><code>assert client.verify(receipt)           # Receipt object
+assert client.verify(receipt.to_json()) # JSON string
+assert client.verify(receipt.to_dict()) # dict</code></pre>
+
+        <h2>get_chain()</h2>
+        <p>Walk a receipt chain backward from a given receipt to its root.</p>
+<pre><code>chain = client.get_chain(receipt_id)
+# Returns [root, ..., receipt] in chronological order</code></pre>
+
+        <h2>export()</h2>
+        <p>Export all stored receipts.</p>
+<pre><code>json_export = client.export(format="json")
+compliance_export = client.export(format="eu-ai-act")</code></pre>
+      </div>
+
+      <!-- Python Receipt -->
+      <div class="page" id="py-receipt">
+        <h1>Python: Receipt</h1>
+        <p>The Receipt dataclass represents a single signed attestation.</p>
+
+<pre><code>receipt.receipt_id      # "01KHZ08YF0S8EN8F5WB8QQ5FMK"
+receipt.timestamp       # "2026-02-21T02:25:48.513Z"
+receipt.agent_id        # "did:key:z6Mk..."
+receipt.action_type     # "inference"
+receipt.output_hash     # "sha256:64ec88ca..."
+receipt.signature       # "ed25519:NrfxVJ1L..."
+
+# Optional
+receipt.input_hash      # "sha256:..." or None
+receipt.model           # Model(provider="anthropic", model_id="claude-sonnet-4-5")
+receipt.chain           # Chain(parent_receipt_id="...", workflow_id="...")
+receipt.metadata        # Metadata(description="...", tags=[...])</code></pre>
+
+        <h2>Serialization</h2>
+<pre><code>json_str = receipt.to_json()
+d = receipt.to_dict()
+
+restored = Receipt.from_json(json_str)
+restored = Receipt.from_dict(d)</code></pre>
+      </div>
+
+      <!-- Python Reputation -->
+      <div class="page" id="py-reputation">
+        <h1>Python: Reputation</h1>
+<pre><code>from rcpt import ReputationEngine
+
+engine = ReputationEngine()
+
+# Add receipts
+for receipt in receipts:
+    engine.add_receipt(receipt)
+
+# Mark third-party verifications
+engine.mark_verified(receipt_id)
+
+# Mark disputes
+engine.mark_disputed(receipt_id)
+
+# Score an agent
+score = engine.score("did:key:z6Mk...")
+print(score.score)          # 72.5
+print(score.level)          # "Trusted"
+print(score.breakdown)      # component scores
+
+# Leaderboard
+top = engine.leaderboard(top_n=10)</code></pre>
+      </div>
+
+      <!-- Python Compliance -->
+      <div class="page" id="py-compliance">
+        <h1>Python: Compliance</h1>
+<pre><code>from rcpt import ComplianceDashboard
+
+dashboard = ComplianceDashboard(receipts)
+
+# Full report
+report = dashboard.generate_report()
+print(report.overall_score)       # 75.0
+print(report.overall_status)      # "Partially Compliant"
+print(report.article_scores)      # {"Article 12": 100, ...}
+
+# Just the gaps
+gaps = dashboard.check_gaps()
+for g in gaps:
+    print(f"{g.article}: {g.requirement}")
+    print(f"  Status: {g.status}")
+    print(f"  Fix: {g.recommendation}")</code></pre>
+      </div>
+
+      <!-- TS Client -->
+      <div class="page" id="ts-client">
+        <h1>TypeScript: RCPTClient</h1>
+<pre><code>import { RCPTClient, ActionType } from 'rcpt';
+
+const client = new RCPTClient();
+// or: new RCPTClient({ privateKey: '...' })
+
+const receipt = client.attest({
+  actionType: ActionType.INFERENCE,
+  output: "Response text",
+  inputData: "User prompt",
+  model: "claude-sonnet-4-5",
+  parent: previousReceiptId,
+});
+
+console.log(client.verify(receipt));    // true
+console.log(client.getChain(receipt.receipt_id));</code></pre>
+      </div>
+
+      <!-- TS Receipt -->
+      <div class="page" id="ts-receipt">
+        <h1>TypeScript: Receipt</h1>
+<pre><code>receipt.receipt_id     // string
+receipt.agent_id       // string (DID)
+receipt.action_type    // string
+receipt.output_hash    // string
+receipt.signature      // string
+
+// Serialization
+const json = receipt.toJSON();
+const dict = receipt.toDict();
+const restored = Receipt.fromJSON(json);</code></pre>
+      </div>
+
+      <!-- TS Reputation -->
+      <div class="page" id="ts-reputation">
+        <h1>TypeScript: Reputation</h1>
+<pre><code>import { ReputationEngine } from 'rcpt';
+
+const engine = new ReputationEngine();
+engine.addReceipts(receipts);
+engine.markVerified(receiptId);
+
+const score = engine.score("did:key:z6Mk...");
+console.log(score.score, score.level);
+
+const board = engine.leaderboard(10);</code></pre>
+      </div>
+
+      <!-- Integration pages -->
+      <div class="page" id="int-langchain">
+        <h1>LangChain Integration</h1>
+<pre><code>pip install rcpt langchain-core</code></pre>
+<pre><code>from rcpt import RCPTClient
+from rcpt_langchain import RCPTCallbackHandler
+
+client = RCPTClient()
+handler = RCPTCallbackHandler(client)
+
+llm = ChatAnthropic(model="claude-sonnet-4-5", callbacks=[handler])
+result = llm.invoke("What is 2+2?")
+
+print(handler.receipt_count)  # receipts for every LLM call, tool call, chain run</code></pre>
+        <p>Works with LangChain and LangGraph. Receipts are automatically chained via <code>run_id</code> / <code>parent_run_id</code>.</p>
+      </div>
+
+      <div class="page" id="int-openai">
+        <h1>OpenAI SDK Integration</h1>
+<pre><code>from rcpt_openai import ReceiptedOpenAI
+
+client = ReceiptedOpenAI(api_key="sk-...")
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+
+print(client.receipts[-1].to_json())</code></pre>
+        <p>Drop-in replacement for <code>openai.OpenAI()</code>. Tool calls get their own chained receipts.</p>
+      </div>
+
+      <div class="page" id="int-anthropic">
+        <h1>Anthropic SDK Integration</h1>
+<pre><code>from rcpt_anthropic import ReceiptedAnthropic
+
+client = ReceiptedAnthropic(api_key="sk-ant-...")
+
+message = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello"}],
+)
+
+print(client.receipts[-1].to_json())</code></pre>
+      </div>
+
+      <div class="page" id="int-crewai">
+        <h1>CrewAI Integration</h1>
+<pre><code>from rcpt import RCPTClient
+from rcpt_crewai import RCPTCrewPlugin
+
+client = RCPTClient()
+plugin = RCPTCrewPlugin(client)
+
+crew = Crew(agents=[...], tasks=[...])
+result = plugin.kickoff(crew)
+
+print(plugin.receipt_count)
+print(plugin.export(format="eu-ai-act"))</code></pre>
+      </div>
+
+      <div class="page" id="int-mcp">
+        <h1>MCP Server</h1>
+<pre><code>// claude_desktop_config.json
+{
+  "mcpServers": {
+    "rcpt": {
+      "command": "python",
+      "args": ["-m", "rcpt_mcp"]
+    }
+  }
+}</code></pre>
+        <p>Exposes 8 tools: <code>rcpt_attest</code>, <code>rcpt_verify</code>, <code>rcpt_get_receipt</code>, <code>rcpt_get_chain</code>, <code>rcpt_hash</code>, <code>rcpt_merkle_anchor</code>, <code>rcpt_export</code>, <code>rcpt_agent_info</code>.</p>
+      </div>
+
+      <div class="page" id="int-fastapi">
+        <h1>FastAPI Middleware</h1>
+<pre><code>from fastapi import FastAPI
+from rcpt_fastapi import RCPTMiddleware
+
+app = FastAPI()
+app.add_middleware(RCPTMiddleware)
+
+@app.post("/agent/invoke")
+async def invoke(prompt: str):
+    return {"response": "Hello"}
+
+# Every response includes X-RCPT-Receipt-ID header
+# GET /rcpt/receipts — list receipts
+# GET /rcpt/agent — agent identity
+# POST /rcpt/verify — verify a receipt</code></pre>
+      </div>
+
+      <div class="page" id="merkle">
+        <h1>Merkle Anchoring</h1>
+<pre><code>from rcpt.hashing import (
+    hash_receipt_canonical,
+    build_merkle_tree,
+    get_merkle_proof,
+    verify_merkle_proof,
+)
+
+# Hash receipts
+hashes = [hash_receipt_canonical(r.to_dict()) for r in receipts]
+
+# Build tree
+root, levels = build_merkle_tree(hashes)
+
+# Get proof for a specific receipt
+proof = get_merkle_proof(hashes, hashes[0])
+
+# Verify (anyone can do this with just root + proof)
+assert verify_merkle_proof(hashes[0], proof, root)</code></pre>
+        <p>The Merkle root can be anchored on Solana via the RCPT anchor program, providing a trustless timestamp proof.</p>
+      </div>
+
+      <div class="page" id="solana">
+        <h1>Solana Program</h1>
+        <p>The RCPT anchor program accepts Merkle roots and stores them as immutable PDAs on Solana.</p>
+        <h2>Instructions</h2>
+        <table>
+          <tr><th>Instruction</th><th>Description</th></tr>
+          <tr><td><code>anchor_root</code></td><td>Anchor a Merkle root on-chain</td></tr>
+          <tr><td><code>verify_proof</code></td><td>Verify a Merkle proof against stored root</td></tr>
+        </table>
+        <p>Cost: ~0.002 SOL per anchor. Batch 1,000 receipts = ~0.000002 SOL per receipt.</p>
+      </div>
+
+      <div class="page" id="euai">
+        <h1>EU AI Act Compliance</h1>
+        <p>RCPT maps directly to three articles of the EU AI Act (enforceable August 2, 2026).</p>
+        <table>
+          <tr><th>Article</th><th>Requirement</th><th>RCPT Coverage</th></tr>
+          <tr><td>12</td><td>Record-keeping</td><td>Automatic signed receipts for every action</td></tr>
+          <tr><td>19</td><td>Transparency</td><td>Model ID, I/O hashes, metadata descriptions</td></tr>
+          <tr><td>26</td><td>Deployer obligations</td><td>Delegation receipts, time-bounded authority</td></tr>
+        </table>
+<pre><code>from rcpt import ComplianceDashboard
+
+dashboard = ComplianceDashboard(receipts)
+report = dashboard.generate_report()
+gaps = dashboard.check_gaps()
+
+# CLI
+rcpt compliance receipts.json --gaps-only</code></pre>
+      </div>
+
+      <div class="page" id="spec">
+        <h1>Specification</h1>
+        <p>The full RCPT v0.1 specification is available at:</p>
+        <p><a href="https://github.com/rcpt-protocol/rcpt-protocol/tree/main/spec/v0.1/SPECIFICATION.md">github.com/rcpt-protocol/rcpt-protocol/spec/v0.1/SPECIFICATION.md</a></p>
+        <p>The JSON Schema for receipt validation:</p>
+        <p><a href="https://github.com/rcpt-protocol/rcpt-protocol/tree/main/spec/v0.1/receipt-schema.json">github.com/rcpt-protocol/rcpt-protocol/spec/v0.1/receipt-schema.json</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function show(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+      document.querySelector('.main').scrollTop = 0;
+    }
+  </script>
+</body>
+</html>

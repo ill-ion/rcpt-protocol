@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RCPT Protocol — Cryptographic Proof-of-Action for AI Agents</title>
+  <meta name="description" content="RCPT is an open protocol that generates a signed, verifiable receipt every time an AI agent takes an action. SSL certificates for AI agents.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0b0d;
+      --surface: #111318;
+      --surface-2: #181b22;
+      --border: #1e222b;
+      --border-glow: #2a3040;
+      --text: #e8eaed;
+      --text-dim: #8a8f9d;
+      --text-muted: #555b6e;
+      --accent: #4af0c0;
+      --accent-dim: rgba(74, 240, 192, 0.12);
+      --accent-glow: rgba(74, 240, 192, 0.06);
+      --blue: #5b9cf5;
+      --orange: #f5a05b;
+      --mono: 'JetBrains Mono', monospace;
+      --serif: 'Source Serif 4', Georgia, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 15px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      background: rgba(10, 11, 13, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+    }
+
+    .logo span { color: var(--text-dim); font-weight: 400; }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-dim);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 200px 0 120px;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-label {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 6px 14px;
+      border: 1px solid rgba(74, 240, 192, 0.2);
+      border-radius: 2px;
+      margin-bottom: 32px;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      max-width: 800px;
+      animation: fadeUp 0.8s ease 0.1s both;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--text-dim);
+      max-width: 540px;
+      margin-top: 28px;
+      line-height: 1.8;
+      animation: fadeUp 0.8s ease 0.2s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 48px;
+      animation: fadeUp 0.8s ease 0.3s both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      background: #6cf5d0;
+      text-decoration: none;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(74, 240, 192, 0.25);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    /* ── Receipt Demo ── */
+    .receipt-section {
+      padding: 80px 0;
+    }
+
+    .receipt-demo {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      animation: fadeUp 0.8s ease 0.4s both;
+    }
+
+    .receipt-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .receipt-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .receipt-dot.r { background: #f55b5b; }
+    .receipt-dot.y { background: #f5c85b; }
+    .receipt-dot.g { background: #4af0c0; }
+
+    .receipt-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
+    .receipt-body {
+      padding: 24px;
+      font-size: 13px;
+      line-height: 1.9;
+      overflow-x: auto;
+    }
+
+    .receipt-body .key { color: var(--blue); }
+    .receipt-body .str { color: var(--accent); }
+    .receipt-body .comment { color: var(--text-muted); font-style: italic; }
+
+    /* ── Flow Diagram ── */
+    .flow {
+      padding: 100px 0;
+    }
+
+    .flow-title {
+      font-family: var(--serif);
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .flow-sub {
+      color: var(--text-dim);
+      max-width: 500px;
+      margin-bottom: 60px;
+    }
+
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 20px;
+    }
+
+    .flow-step {
+      flex: 0 0 auto;
+      text-align: center;
+      padding: 32px 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      min-width: 180px;
+      transition: border-color 0.3s;
+    }
+
+    .flow-step:hover {
+      border-color: var(--accent);
+    }
+
+    .flow-step-icon {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    .flow-step-label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .flow-step-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .flow-arrow {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      color: var(--text-muted);
+      font-size: 20px;
+    }
+
+    /* ── Features ── */
+    .features {
+      padding: 100px 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .feature {
+      background: var(--surface);
+      padding: 40px 32px;
+      transition: background 0.3s;
+    }
+
+    .feature:hover {
+      background: var(--surface-2);
+    }
+
+    .feature-tag {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .feature h3 {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .feature p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+
+    /* ── Install ── */
+    .install {
+      padding: 100px 0;
+      text-align: center;
+    }
+
+    .install-title {
+      font-family: var(--serif);
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 48px;
+    }
+
+    .install-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 0;
+    }
+
+    .install-tab {
+      padding: 12px 28px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg);
+    }
+
+    .install-tab:first-child { border-radius: 4px 0 0 0; }
+    .install-tab:last-child { border-radius: 0 4px 0 0; }
+
+    .install-tab.active {
+      color: var(--accent);
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    .install-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0 0 4px 4px;
+      padding: 40px;
+      text-align: left;
+      max-width: 640px;
+      margin: 0 auto;
+      display: none;
+    }
+
+    .install-block.active { display: block; }
+
+    .install-block code {
+      display: block;
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 2;
+    }
+
+    .install-block .comment { color: var(--text-muted); }
+    .install-block .cmd { color: var(--accent); }
+    .install-block .kw { color: var(--blue); }
+    .install-block .fn { color: var(--orange); }
+
+    /* ── Standards ── */
+    .standards {
+      padding: 100px 0;
+    }
+
+    .standards-title {
+      font-family: var(--serif);
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .standards-sub {
+      color: var(--text-dim);
+      max-width: 540px;
+      margin-bottom: 48px;
+    }
+
+    .standards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .standard-item {
+      display: flex;
+      gap: 16px;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    .standard-item-tag {
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      padding: 4px 10px;
+      border: 1px solid rgba(74, 240, 192, 0.2);
+      border-radius: 2px;
+      height: fit-content;
+    }
+
+    .standard-item h4 { font-size: 14px; margin-bottom: 4px; }
+    .standard-item p { font-size: 12px; color: var(--text-dim); }
+
+    /* ── Footer ── */
+    footer {
+      padding: 60px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    footer .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .standards-grid { grid-template-columns: 1fr; }
+      .flow-steps { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+      .hero { padding: 140px 0 80px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="container">
+      <div class="logo">RCPT<span> Protocol</span></div>
+      <ul class="nav-links">
+        <li><a href="https://github.com/rcpt-protocol/rcpt-protocol">GitHub</a></li>
+        <li><a href="https://github.com/rcpt-protocol/rcpt-protocol/tree/main/spec/v0.1">Spec</a></li>
+        <li><a href="https://rcpt.dev">Docs</a></li>
+        <li><a href="https://github.com/rcpt-protocol/rcpt-protocol/tree/main/sdk">SDKs</a></li>
+        <li><a href="https://rcpt.dev/explorer">Explorer</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-label">Submitted to NIST · Open Standard</div>
+      <h1>SSL certificates<br>for <em>AI agents</em></h1>
+      <p class="hero-sub">RCPT generates a signed, verifiable cryptographic receipt every time an AI agent takes an action. Receipts chain into audit trails, anchor on-chain, and compose into agent identity and reputation.</p>
+      <div class="hero-actions">
+        <a href="https://github.com/rcpt-protocol/rcpt-protocol" class="btn btn-primary">View on GitHub →</a>
+        <a href="https://github.com/rcpt-protocol/rcpt-protocol/tree/main/spec/v0.1/SPECIFICATION.md" class="btn btn-secondary">Read the Spec</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Receipt Demo -->
+  <section class="receipt-section">
+    <div class="container">
+      <div class="receipt-demo">
+        <div class="receipt-header">
+          <div class="receipt-dot r"></div>
+          <div class="receipt-dot y"></div>
+          <div class="receipt-dot g"></div>
+          <span class="receipt-title">receipt.json — 7 required fields, everything else optional</span>
+        </div>
+        <pre class="receipt-body">{
+  <span class="key">"rcpt_version"</span>: <span class="str">"0.1"</span>,
+  <span class="key">"receipt_id"</span>:   <span class="str">"01KHZ08YF0S8EN8F5WB8QQ5FMK"</span>,       <span class="comment">// ULID — sortable, timestamped</span>
+  <span class="key">"timestamp"</span>:    <span class="str">"2026-02-21T02:25:48.513Z"</span>,
+  <span class="key">"agent_id"</span>:     <span class="str">"did:key:z6MkqoZdxCGZ..."</span>,          <span class="comment">// W3C DID — identity IS the public key</span>
+  <span class="key">"action_type"</span>:  <span class="str">"inference"</span>,
+  <span class="key">"output_hash"</span>:  <span class="str">"sha256:64ec88ca00b2..."</span>,           <span class="comment">// Content hashed, never stored</span>
+  <span class="key">"signature"</span>:    <span class="str">"ed25519:NrfxVJ1LiRto..."</span>           <span class="comment">// Ed25519 over JCS-canonicalized body</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Flow -->
+  <section class="flow">
+    <div class="container">
+      <h2 class="flow-title">How it works</h2>
+      <p class="flow-sub">Every action gets a receipt. Receipts chain into workflows. Workflows anchor on-chain.</p>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-icon">⚡</div>
+          <div class="flow-step-label">Agent Action</div>
+          <div class="flow-step-desc">Inference, tool call,<br>transaction, delegation</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-icon">📄</div>
+          <div class="flow-step-label">RCPT Receipt</div>
+          <div class="flow-step-desc">Signed JSON with<br>Ed25519 + SHA-256</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-icon">🔗</div>
+          <div class="flow-step-label">Receipt Chain</div>
+          <div class="flow-step-desc">Linked parent IDs,<br>workflow grouping</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-icon">🌳</div>
+          <div class="flow-step-label">Merkle Tree</div>
+          <div class="flow-step-desc">Batched hashes,<br>proof generation</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-icon">⛓</div>
+          <div class="flow-step-label">Solana</div>
+          <div class="flow-step-desc">Root anchored,<br>trustless verification</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="container">
+      <div class="features-grid">
+        <div class="feature">
+          <div class="feature-tag">Identity</div>
+          <h3>Agent identity from receipts</h3>
+          <p>An agent's receipt chain IS its identity. No centralized registry. DID-based, ephemeral or persistent, automatically built from action history.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-tag">Verification</div>
+          <h3>Tamper-evident by default</h3>
+          <p>Every receipt is Ed25519-signed over JCS-canonicalized JSON. Modify one byte and verification fails. No trust required — only math.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-tag">Compliance</div>
+          <h3>EU AI Act ready</h3>
+          <p>Direct mapping to Articles 12, 19, and 26 logging requirements. Export receipts in compliance format. Audit-ready from day one.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-tag">Privacy</div>
+          <h3>Hashes only, never data</h3>
+          <p>Receipts contain SHA-256 hashes of inputs and outputs — never the raw data. GDPR crypto-shredding compatible. Privacy by architecture.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-tag">Performance</div>
+          <h3>&lt;1ms receipt generation</h3>
+          <p>Signing is fast. Anchoring is async and batched. Zero impact on agent latency. Receipts are tiny JSON — kilobytes, not megabytes.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-tag">Universal</div>
+          <h3>Works with everything</h3>
+          <p>Framework-agnostic, model-agnostic, chain-agnostic. Python and TypeScript SDKs. LangChain integration. MCP server. Apache 2.0 licensed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section class="install">
+    <div class="container">
+      <h2 class="install-title">Get started in 30 seconds</h2>
+      <div class="install-tabs">
+        <div class="install-tab active" onclick="showTab('python')">Python</div>
+        <div class="install-tab" onclick="showTab('typescript')">TypeScript</div>
+        <div class="install-tab" onclick="showTab('mcp')">MCP</div>
+      </div>
+      <div class="install-block active" id="tab-python">
+        <code><span class="comment"># Install</span>
+<span class="cmd">pip install rcpt</span>
+
+<span class="comment"># Generate a signed receipt</span>
+<span class="kw">from</span> rcpt <span class="kw">import</span> RCPTClient, ActionType
+
+client = RCPTClient()
+receipt = client.<span class="fn">attest</span>(
+    action_type=ActionType.INFERENCE,
+    output=response_text,
+    model=<span class="str">"claude-sonnet-4-5"</span>
+)
+
+<span class="kw">assert</span> client.<span class="fn">verify</span>(receipt)  <span class="comment"># True</span></code>
+      </div>
+      <div class="install-block" id="tab-typescript">
+        <code><span class="comment">// Install</span>
+<span class="cmd">npm install rcpt</span>
+
+<span class="comment">// Generate a signed receipt</span>
+<span class="kw">import</span> { RCPTClient, ActionType } <span class="kw">from</span> <span class="str">'rcpt'</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">RCPTClient</span>();
+<span class="kw">const</span> receipt = client.<span class="fn">attest</span>({
+  actionType: ActionType.TOOL_CALL,
+  output: apiResponse,
+});
+
+console.<span class="fn">log</span>(client.<span class="fn">verify</span>(receipt)); <span class="comment">// true</span></code>
+      </div>
+      <div class="install-block" id="tab-mcp">
+        <code><span class="comment">// claude_desktop_config.json</span>
+{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"rcpt"</span>: {
+      <span class="str">"command"</span>: <span class="str">"python"</span>,
+      <span class="str">"args"</span>: [<span class="str">"-m"</span>, <span class="str">"rcpt_mcp"</span>]
+    }
+  }
+}
+
+<span class="comment">// Now any MCP-compatible agent can:</span>
+<span class="comment">// → rcpt_attest(action_type, output, model)</span>
+<span class="comment">// → rcpt_verify(receipt_json)</span>
+<span class="comment">// → rcpt_get_chain(receipt_id)</span></code>
+      </div>
+    </div>
+  </section>
+
+  <!-- Standards Alignment -->
+  <section class="standards">
+    <div class="container">
+      <h2 class="standards-title">Complements existing standards</h2>
+      <p class="standards-sub">RCPT doesn't replace OAuth, OIDC, or SPIFFE. It adds the missing non-repudiation and audit layer.</p>
+      <div class="standards-grid">
+        <div class="standard-item">
+          <div class="standard-item-tag">Ed25519</div>
+          <div>
+            <h4>RFC 8032 signatures</h4>
+            <p>Fast, compact, deterministic. The same curve used by SSH, Signal, and Solana.</p>
+          </div>
+        </div>
+        <div class="standard-item">
+          <div class="standard-item-tag">JCS</div>
+          <div>
+            <h4>RFC 8785 canonicalization</h4>
+            <p>Deterministic JSON serialization. Same input always produces the same bytes to sign.</p>
+          </div>
+        </div>
+        <div class="standard-item">
+          <div class="standard-item-tag">DID</div>
+          <div>
+            <h4>W3C Decentralized Identifiers</h4>
+            <p>Agent identity IS the public key. No registry dependency. Interoperable with OIDC claims.</p>
+          </div>
+        </div>
+        <div class="standard-item">
+          <div class="standard-item-tag">MCP</div>
+          <div>
+            <h4>Model Context Protocol</h4>
+            <p>Native MCP server. Any MCP-compatible agent can generate and verify receipts as a tool.</p>
+          </div>
+        </div>
+        <div class="standard-item">
+          <div class="standard-item-tag">NIST</div>
+          <div>
+            <h4>NCCoE agent identity</h4>
+            <p>Submitted to NIST's call for agent identity and authorization solutions.</p>
+          </div>
+        </div>
+        <div class="standard-item">
+          <div class="standard-item-tag">EU AI</div>
+          <div>
+            <h4>AI Act compliance</h4>
+            <p>Maps to Articles 12, 19, and 26 audit logging requirements. Enforceable August 2026.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-left">RCPT Protocol · Apache 2.0 · Open Standard</div>
+      <ul class="footer-links">
+        <li><a href="https://github.com/rcpt-protocol/rcpt-protocol">GitHub</a></li>
+        <li><a href="https://github.com/rcpt-protocol/rcpt-protocol/tree/main/spec/v0.1/SPECIFICATION.md">Specification</a></li>
+        <li><a href="https://rcpt.dev">Documentation</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    function showTab(tab) {
+      document.querySelectorAll('.install-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.install-block').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+
+</body>
+</html>

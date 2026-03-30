@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rcpt"
+version = "0.1.1"
+description = "RCPT — Receipt Chain Protocol for Trust. Cryptographic proof-of-action for AI agents."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "RCPT Protocol Contributors"},
+]
+keywords = ["ai", "agents", "attestation", "receipts", "cryptography", "verification", "audit"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+crypto = ["pynacl>=1.5.0"]
+all = ["pynacl>=1.5.0"]
+
+[project.urls]
+Homepage = "https://rcptprotocol.com"
+Repository = "https://github.com/rcpt-protocol/rcpt-protocol"
+Specification = "https://github.com/rcpt-protocol/rcpt-protocol/tree/main/spec/v0.1"
+Documentation = "https://rcpt.dev"
+
+[project.scripts]
+rcpt = "rcpt.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rcpt*"]

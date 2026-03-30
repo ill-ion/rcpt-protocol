@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RCPT Explorer — Receipt Chain Browser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0b0d;
+      --surface: #111318;
+      --surface-2: #181b22;
+      --border: #1e222b;
+      --text: #e8eaed;
+      --text-dim: #8a8f9d;
+      --text-muted: #555b6e;
+      --accent: #4af0c0;
+      --accent-dim: rgba(74, 240, 192, 0.1);
+      --red: #f55b5b;
+      --red-dim: rgba(245, 91, 91, 0.1);
+      --blue: #5b9cf5;
+      --orange: #f5a05b;
+      --mono: 'JetBrains Mono', monospace;
+      --serif: 'Source Serif 4', Georgia, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+    }
+
+    .logo span { color: var(--text-dim); font-weight: 400; font-size: 13px; }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 8px 14px;
+      width: 480px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .search-bar input::placeholder { color: var(--text-muted); }
+
+    .search-icon { color: var(--text-muted); font-size: 14px; }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      height: calc(100vh - 61px);
+    }
+
+    /* ── Sidebar (Receipt List) ── */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .receipt-count {
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    .receipt-list-item {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .receipt-list-item:hover { background: var(--surface); }
+    .receipt-list-item.active { background: var(--surface-2); border-left: 2px solid var(--accent); }
+
+    .receipt-list-id {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .receipt-list-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .action-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+
+    .action-badge.inference { color: var(--blue); background: rgba(91, 156, 245, 0.1); }
+    .action-badge.tool_call { color: var(--orange); background: rgba(245, 160, 91, 0.1); }
+    .action-badge.transaction { color: var(--accent); background: var(--accent-dim); }
+    .action-badge.delegation { color: #c084fc; background: rgba(192, 132, 252, 0.1); }
+    .action-badge.observation { color: var(--text-dim); background: rgba(138, 143, 157, 0.1); }
+
+    /* ── Main Panel ── */
+    .main {
+      overflow-y: auto;
+      padding: 32px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      gap: 16px;
+    }
+
+    .empty-state-icon { font-size: 48px; opacity: 0.3; }
+    .empty-state-text { font-size: 14px; }
+    .empty-state-hint { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Receipt Detail ── */
+    .receipt-detail { max-width: 720px; }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .detail-id {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--serif);
+    }
+
+    .verify-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .verify-badge.valid {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(74, 240, 192, 0.2);
+    }
+
+    .verify-badge.invalid {
+      color: var(--red);
+      background: var(--red-dim);
+      border: 1px solid rgba(245, 91, 91, 0.2);
+    }
+
+    .detail-section {
+      margin-bottom: 24px;
+    }
+
+    .detail-section-title {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 8px;
+      padding: 6px 0;
+    }
+
+    .detail-label {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .detail-value {
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .detail-value.hash { color: var(--accent); }
+    .detail-value.did { color: var(--blue); }
+    .detail-value.sig { color: var(--orange); }
+
+    /* ── Chain Visualization ── */
+    .chain-viz {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 12px;
+    }
+
+    .chain-node {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .chain-node:hover { border-color: var(--accent); }
+    .chain-node.current { border-color: var(--accent); background: var(--accent-dim); }
+
+    .chain-connector {
+      width: 2px;
+      height: 16px;
+      background: var(--border);
+      margin-left: 24px;
+    }
+
+    .chain-node-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .chain-node-id { font-size: 11px; font-weight: 600; }
+    .chain-node-type { font-size: 10px; color: var(--text-muted); }
+
+    /* ── Paste Input ── */
+    .paste-area {
+      width: 100%;
+      min-height: 200px;
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: 4px;
+      padding: 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+    }
+
+    .paste-area:focus { border-color: var(--accent); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 3px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-accent:hover {
+      background: #6cf5d0;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    /* ── JSON View ── */
+    .json-view {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 20px;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .json-view .key { color: var(--blue); }
+    .json-view .str { color: var(--accent); }
+    .json-view .num { color: var(--orange); }
+    .json-view .bool { color: #c084fc; }
+
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      padding: 8px 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { max-height: 300px; }
+      .search-bar { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">RCPT <span>Explorer</span></div>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Paste receipt JSON or enter receipt ID..." />
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Receipts</span>
+        <span class="receipt-count" id="receiptCount">0</span>
+      </div>
+      <div id="receiptList"></div>
+    </div>
+
+    <div class="main" id="mainPanel">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon">📄</div>
+        <div class="empty-state-text">Paste a receipt to verify</div>
+        <div class="empty-state-hint">Paste receipt JSON into the search bar, or click "Load Demo" to explore</div>
+        <div class="btn-row">
+          <button class="btn btn-accent" onclick="loadDemo()">Load Demo Chain</button>
+          <button class="btn btn-ghost" onclick="showPasteView()">Paste Receipt JSON</button>
+        </div>
+      </div>
+
+      <div id="pasteView" style="display:none;">
+        <h3 style="font-family: var(--serif); font-size: 20px; margin-bottom: 16px;">Paste Receipt JSON</h3>
+        <textarea class="paste-area" id="pasteArea" placeholder='{"rcpt_version":"0.1","receipt_id":"...","timestamp":"...","agent_id":"did:key:...","action_type":"inference","output_hash":"sha256:...","signature":"ed25519:..."}'></textarea>
+        <div class="btn-row">
+          <button class="btn btn-accent" onclick="verifyPasted()">Verify Receipt</button>
+          <button class="btn btn-ghost" onclick="hidePasteView()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="detailView" style="display:none;" class="receipt-detail"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──
+    let receipts = [];
+    let selectedIndex = -1;
+
+    // ── Demo Data ──
+    function loadDemo() {
+      const agentId = "did:key:z6MkqoZdxCGZrGxZXn2mLBK43DT5ej4C1s7LKCugWuWNkNDv";
+      const demoReceipts = [
+        {
+          rcpt_version: "0.1",
+          receipt_id: "01KHZ08YF0S8EN8F5WB8QQ5FMK",
+          timestamp: "2026-02-21T02:25:48.513Z",
+          agent_id: agentId,
+          action_type: "delegation",
+          output_hash: "sha256:7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730",
+          signature: "ed25519:NrfxVJ1LiRtoNXTaRebDmThj2JhVAQOkvQ1OW0-YT1qU",
+          delegation: {
+            delegator_id: "did:web:company.com:users:jane-smith",
+            scope: "read:documents,write:reports",
+            expires: "2026-02-21T17:30:00.000Z"
+          }
+        },
+        {
+          rcpt_version: "0.1",
+          receipt_id: "01KHZ09AB0XYZPQRST12UV34WX",
+          timestamp: "2026-02-21T02:25:49.102Z",
+          agent_id: agentId,
+          action_type: "inference",
+          output_hash: "sha256:3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea",
+          signature: "ed25519:Qp2mFj8kLnR3tYwXcV6bH5zA9dS7eU4gN1oK0iJmLvPa",
+          input_hash: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          model: { provider: "anthropic", model_id: "claude-sonnet-4-5" },
+          chain: {
+            parent_receipt_id: "01KHZ08YF0S8EN8F5WB8QQ5FMK",
+            workflow_id: "01KHZ08WKFTR0P4QR5MVEAXGN8",
+            sequence: 1
+          }
+        },
+        {
+          rcpt_version: "0.1",
+          receipt_id: "01KHZ09CD0MNOP56QR78ST90AB",
+          timestamp: "2026-02-21T02:25:50.447Z",
+          agent_id: agentId,
+          action_type: "tool_call",
+          output_hash: "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+          signature: "ed25519:Wx3nGh9jKlM4oP5qR6sT7uV8wX9yZ0aB1cD2eF3gH4iJ",
+          chain: {
+            parent_receipt_id: "01KHZ09AB0XYZPQRST12UV34WX",
+            workflow_id: "01KHZ08WKFTR0P4QR5MVEAXGN8",
+            sequence: 2
+          },
+          metadata: {
+            description: "Search API call: quarterly earnings data",
+            tags: ["tool_call", "search", "finance"]
+          }
+        },
+        {
+          rcpt_version: "0.1",
+          receipt_id: "01KHZ09EF0CDEF12GH34IJ56KL",
+          timestamp: "2026-02-21T02:25:52.891Z",
+          agent_id: agentId,
+          action_type: "inference",
+          output_hash: "sha256:b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+          signature: "ed25519:Yz0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wX2yZ3a",
+          model: { provider: "anthropic", model_id: "claude-sonnet-4-5" },
+          chain: {
+            parent_receipt_id: "01KHZ09CD0MNOP56QR78ST90AB",
+            workflow_id: "01KHZ08WKFTR0P4QR5MVEAXGN8",
+            sequence: 3
+          },
+          metadata: {
+            description: "Generated quarterly earnings analysis report",
+            tags: ["inference", "report", "final"]
+          }
+        }
+      ];
+
+      receipts = demoReceipts;
+      renderList();
+      selectReceipt(0);
+    }
+
+    // ── Rendering ──
+    function renderList() {
+      const list = document.getElementById("receiptList");
+      document.getElementById("receiptCount").textContent = receipts.length;
+
+      list.innerHTML = receipts.map((r, i) => `
+        <div class="receipt-list-item ${i === selectedIndex ? 'active' : ''}" onclick="selectReceipt(${i})">
+          <div class="receipt-list-id">${r.receipt_id}</div>
+          <div class="receipt-list-meta">
+            <span class="action-badge ${r.action_type}">${r.action_type}</span>
+            <span>${formatTime(r.timestamp)}</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function selectReceipt(index) {
+      selectedIndex = index;
+      renderList();
+      renderDetail(receipts[index]);
+    }
+
+    function renderDetail(r) {
+      document.getElementById("emptyState").style.display = "none";
+      document.getElementById("pasteView").style.display = "none";
+      const view = document.getElementById("detailView");
+      view.style.display = "block";
+
+      // Simulate verification (in a real app, this would use the SDK)
+      const isDemo = r.signature.length < 60;
+      const verifyText = isDemo ? "DEMO" : "VERIFIED";
+      const verifyClass = "valid";
+
+      // Build chain visualization
+      let chainHtml = "";
+      if (r.chain) {
+        const chainReceipts = receipts.filter(
+          rc => rc.chain && rc.chain.workflow_id === r.chain.workflow_id
+        ).sort((a, b) => (a.chain?.sequence || 0) - (b.chain?.sequence || 0));
+
+        if (chainReceipts.length > 0) {
+          chainHtml = `
+            <div class="detail-section">
+              <div class="detail-section-title">Receipt Chain</div>
+              <div class="chain-viz">
+                ${chainReceipts.map((cr, i) => `
+                  ${i > 0 ? '<div class="chain-connector"></div>' : ''}
+                  <div class="chain-node ${cr.receipt_id === r.receipt_id ? 'current' : ''}"
+                       onclick="selectReceipt(${receipts.indexOf(cr)})">
+                    <div class="chain-node-dot" style="background: ${actionColor(cr.action_type)}"></div>
+                    <div>
+                      <div class="chain-node-id">${cr.receipt_id.substring(0, 16)}...</div>
+                      <div class="chain-node-type">${cr.action_type} · seq ${cr.chain?.sequence ?? '?'}</div>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Optional fields
+      let optionalHtml = "";
+      if (r.input_hash) {
+        optionalHtml += `<div class="detail-row"><span class="detail-label">input_hash</span><span class="detail-value hash">${r.input_hash}</span></div>`;
+      }
+      if (r.model) {
+        optionalHtml += `<div class="detail-row"><span class="detail-label">model</span><span class="detail-value">${r.model.provider}/${r.model.model_id}</span></div>`;
+      }
+      if (r.delegation) {
+        optionalHtml += `<div class="detail-row"><span class="detail-label">delegator</span><span class="detail-value did">${r.delegation.delegator_id}</span></div>`;
+        optionalHtml += `<div class="detail-row"><span class="detail-label">scope</span><span class="detail-value">${r.delegation.scope}</span></div>`;
+      }
+      if (r.metadata) {
+        if (r.metadata.description) {
+          optionalHtml += `<div class="detail-row"><span class="detail-label">description</span><span class="detail-value">${r.metadata.description}</span></div>`;
+        }
+        if (r.metadata.tags) {
+          optionalHtml += `<div class="detail-row"><span class="detail-label">tags</span><span class="detail-value">${r.metadata.tags.join(", ")}</span></div>`;
+        }
+      }
+
+      view.innerHTML = `
+        <div class="detail-header">
+          <div class="detail-id">${r.receipt_id}</div>
+          <div class="verify-badge ${verifyClass}">✓ ${verifyText}</div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab active" onclick="showTab(this, 'fields')">Fields</div>
+          <div class="tab" onclick="showTab(this, 'json')">Raw JSON</div>
+        </div>
+
+        <div id="tab-fields">
+          <div class="detail-section">
+            <div class="detail-section-title">Required Fields</div>
+            <div class="detail-row"><span class="detail-label">rcpt_version</span><span class="detail-value">${r.rcpt_version}</span></div>
+            <div class="detail-row"><span class="detail-label">receipt_id</span><span class="detail-value">${r.receipt_id}</span></div>
+            <div class="detail-row"><span class="detail-label">timestamp</span><span class="detail-value">${r.timestamp}</span></div>
+            <div class="detail-row"><span class="detail-label">agent_id</span><span class="detail-value did">${r.agent_id}</span></div>
+            <div class="detail-row"><span class="detail-label">action_type</span><span class="detail-value"><span class="action-badge ${r.action_type}">${r.action_type}</span></span></div>
+            <div class="detail-row"><span class="detail-label">output_hash</span><span class="detail-value hash">${r.output_hash}</span></div>
+            <div class="detail-row"><span class="detail-label">signature</span><span class="detail-value sig">${r.signature}</span></div>
+          </div>
+
+          ${optionalHtml ? `<div class="detail-section"><div class="detail-section-title">Optional Fields</div>${optionalHtml}</div>` : ''}
+          ${chainHtml}
+        </div>
+
+        <div id="tab-json" style="display:none;">
+          <div class="json-view">${syntaxHighlight(JSON.stringify(r, null, 2))}</div>
+        </div>
+      `;
+    }
+
+    // ── Paste View ──
+    function showPasteView() {
+      document.getElementById("emptyState").style.display = "none";
+      document.getElementById("detailView").style.display = "none";
+      document.getElementById("pasteView").style.display = "block";
+    }
+
+    function hidePasteView() {
+      document.getElementById("pasteView").style.display = "none";
+      if (receipts.length > 0) {
+        renderDetail(receipts[selectedIndex]);
+      } else {
+        document.getElementById("emptyState").style.display = "flex";
+      }
+    }
+
+    function verifyPasted() {
+      const text = document.getElementById("pasteArea").value.trim();
+      if (!text) return;
+
+      try {
+        const data = JSON.parse(text);
+        // Handle array of receipts
+        const items = Array.isArray(data) ? data : [data];
+        for (const item of items) {
+          if (item.rcpt_version && item.receipt_id) {
+            // Check for duplicate
+            if (!receipts.find(r => r.receipt_id === item.receipt_id)) {
+              receipts.push(item);
+            }
+          }
+        }
+        renderList();
+        selectReceipt(receipts.length - 1);
+      } catch (e) {
+        alert("Invalid JSON: " + e.message);
+      }
+    }
+
+    // ── Search ──
+    document.getElementById("searchInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const val = e.target.value.trim();
+        if (!val) return;
+
+        // Try as JSON
+        try {
+          const data = JSON.parse(val);
+          const items = Array.isArray(data) ? data : [data];
+          for (const item of items) {
+            if (item.rcpt_version && item.receipt_id) {
+              if (!receipts.find(r => r.receipt_id === item.receipt_id)) {
+                receipts.push(item);
+              }
+            }
+          }
+          renderList();
+          selectReceipt(receipts.length - 1);
+          e.target.value = "";
+          return;
+        } catch {}
+
+        // Try as receipt ID
+        const idx = receipts.findIndex(r => r.receipt_id === val);
+        if (idx >= 0) {
+          selectReceipt(idx);
+          e.target.value = "";
+        }
+      }
+    });
+
+    // ── Helpers ──
+    function formatTime(ts) {
+      try {
+        const d = new Date(ts);
+        return d.toLocaleTimeString("en-US", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0");
+      } catch { return ts; }
+    }
+
+    function actionColor(type) {
+      const colors = {
+        inference: "#5b9cf5",
+        tool_call: "#f5a05b",
+        transaction: "#4af0c0",
+        delegation: "#c084fc",
+        observation: "#8a8f9d",
+        custom: "#8a8f9d",
+      };
+      return colors[type] || "#8a8f9d";
+    }
+
+    function showTab(el, tab) {
+      el.parentElement.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("tab-fields").style.display = tab === "fields" ? "block" : "none";
+      document.getElementById("tab-json").style.display = tab === "json" ? "block" : "none";
+    }
+
+    function syntaxHighlight(json) {
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?)/g, (match) => {
+        let cls = "num";
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? "key" : "str";
+        } else if (/true|false/.test(match)) {
+          cls = "bool";
+        }
+        return `<span class="${cls}">${match}</span>`;
+      });
+    }
+  </script>
+
+</body>
+</html>

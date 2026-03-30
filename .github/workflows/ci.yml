@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-sdk:
+    name: Python SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install cryptography
+      - name: Run tests
+        working-directory: sdk/python
+        run: python -m unittest discover -s tests -v
+
+  typescript-sdk:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        working-directory: sdk/typescript
+        run: npm install
+      - name: Build
+        working-directory: sdk/typescript
+        run: npx tsc
+      - name: Run tests
+        working-directory: sdk/typescript
+        run: node --test tests/test_rcpt.mjs
+
+  mcp-server:
+    name: MCP Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install cryptography
+      - name: Run tests
+        working-directory: integrations/mcp
+        run: python -m unittest test_mcp -v
+
+  reputation-and-compliance:
+    name: Reputation & Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install cryptography
+      - name: Run reputation tests
+        working-directory: sdk/python
+        run: python -m unittest tests.test_reputation -v
+      - name: Run compliance tests
+        working-directory: sdk/python
+        run: python -m unittest tests.test_compliance -v

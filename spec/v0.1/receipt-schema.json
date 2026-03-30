@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rcpt-protocol.org/schema/v0.1/receipt.json",
+  "title": "RCPT Receipt",
+  "description": "Receipt Chain Protocol for Trust \u2014 cryptographic proof-of-action for AI agents. See https://rcpt-protocol.org/spec/v0.1 for the full specification.",
+  "type": "object",
+  "required": [
+    "rcpt_version",
+    "receipt_id",
+    "timestamp",
+    "agent_id",
+    "action_type",
+    "output_hash",
+    "signature"
+  ],
+  "properties": {
+    "rcpt_version": {
+      "type": "string",
+      "const": "0.1",
+      "description": "Protocol version"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID \u2014 universally unique, lexicographically sortable identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp with millisecond precision, UTC"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^did:",
+      "description": "Decentralized Identifier (DID) of the signing agent. Typically did:key for ephemeral agents or did:web for organization-anchored agents."
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "inference",
+        "tool_call",
+        "transaction",
+        "delegation",
+        "observation",
+        "custom"
+      ],
+      "description": "Category of action being attested"
+    },
+    "output_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 hash of the action output, prefixed with sha256:"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^ed25519:",
+      "description": "Ed25519 signature of the canonical receipt body (JCS-serialized, SHA-256 hashed), base64url-encoded, prefixed with ed25519:"
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 hash of the action input/prompt"
+    },
+    "parameters_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 hash of model configuration (temperature, system prompt, etc.)"
+    },
+    "model": {
+      "type": "object",
+      "description": "Model identification",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Model provider (e.g., anthropic, openai, google, meta)"
+        },
+        "model_id": {
+          "type": "string",
+          "description": "Model identifier (e.g., claude-sonnet-4-5-20250929)"
+        },
+        "version": {
+          "type": "string",
+          "description": "Model version or release date"
+        }
+      },
+      "required": [
+        "provider",
+        "model_id"
+      ]
+    },
+    "framework": {
+      "type": "object",
+      "description": "Agent framework identification",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Framework name (e.g., langchain, crewai, autogen)"
+        },
+        "version": {
+          "type": "string",
+          "description": "Framework version"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "chain": {
+      "type": "object",
+      "description": "Receipt chaining for multi-step workflows",
+      "properties": {
+        "parent_receipt_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+              "description": "Single parent receipt ID"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+              },
+              "minItems": 1,
+              "description": "Multiple parent receipt IDs (fan-in)"
+            }
+          ],
+          "description": "Parent receipt ID(s) for chaining"
+        },
+        "workflow_id": {
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+          "description": "Groups related receipts into a single workflow"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Position in the workflow chain (1-indexed)"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Delegation depth (0 = original agent)"
+        }
+      }
+    },
+    "delegation": {
+      "type": "object",
+      "description": "Present when agent is acting on behalf of another entity",
+      "properties": {
+        "delegator_id": {
+          "type": "string",
+          "pattern": "^did:",
+          "description": "DID of the delegating entity (human or agent)"
+        },
+        "scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Authorization scope list (e.g., [\"read:documents\", \"write:email\"])"
+        },
+        "expires": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Delegation expiry timestamp"
+        },
+        "authorization_ref": {
+          "type": "string",
+          "description": "Reference to external authorization (OAuth token ID, etc.)"
+        }
+      },
+      "required": [
+        "delegator_id",
+        "scope"
+      ]
+    },
+    "anchor": {
+      "type": "object",
+      "description": "On-chain anchoring proof (populated after anchoring)",
+      "properties": {
+        "chain": {
+          "type": "string",
+          "description": "Blockchain identifier (e.g., solana, ethereum)"
+        },
+        "tx_hash": {
+          "type": "string",
+          "description": "Transaction hash of the anchoring transaction"
+        },
+        "merkle_root": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "Merkle root of the batch containing this receipt"
+        },
+        "merkle_proof": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "description": "Merkle proof path from receipt hash to root"
+        },
+        "anchored_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the Merkle root was anchored"
+        }
+      },
+      "required": [
+        "chain",
+        "tx_hash",
+        "merkle_root"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Free-form context and annotations",
+      "properties": {
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Human-readable description of the action"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "maxItems": 20,
+          "description": "Categorization tags"
+        },
+        "ttl": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time-to-live in seconds (0 = permanent)"
+        },
+        "compliance": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "eu-ai-act",
+              "nist-800-207",
+              "sox",
+              "hipaa",
+              "gdpr"
+            ]
+          },
+          "description": "Compliance frameworks this receipt satisfies"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
