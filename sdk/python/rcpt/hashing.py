@@ -59,9 +59,9 @@ def canonical_serialize(obj: Any) -> bytes:
     4. Numbers use shortest representation (no trailing zeros)
     5. UTF-8 encoding
 
-    This implementation covers the common cases needed for RCPT receipts.
-    For full RFC 8785 compliance with edge cases (e.g., special floats),
-    consider using a dedicated JCS library.
+    Numbers follow the ECMAScript Number-to-String algorithm (RFC 8785 §3.2.2.3),
+    so 1.0 serializes as "1" and 1e-7 as "1e-7" — byte-identical to the
+    TypeScript SDK and to any conforming JCS implementation.
     """
     return _jcs_serialize(obj).encode("utf-8")
 
@@ -75,25 +75,17 @@ def _jcs_serialize(obj: Any) -> str:
     elif isinstance(obj, int):
         return str(obj)
     elif isinstance(obj, float):
-        # JCS requires shortest representation
-        if obj == 0.0:
-            return "0" if not _is_negative_zero(obj) else "-0"
-        # Use repr for precision, strip trailing zeros
-        s = repr(obj)
-        return s
+        return _jcs_number(obj)
     elif isinstance(obj, str):
         return _jcs_string(obj)
-    elif isinstance(obj, list):
+    elif isinstance(obj, (list, tuple)):
         items = ",".join(_jcs_serialize(item) for item in obj)
         return f"[{items}]"
     elif isinstance(obj, dict):
-        # Sort keys by Unicode code point (lexicographic)
-        sorted_keys = sorted(obj.keys())
-        pairs = []
-        for key in sorted_keys:
-            value = obj[key]
-            if value is not None:  # JCS omits keys with null values? No — include them.
-                pairs.append(f"{_jcs_string(key)}:{_jcs_serialize(value)}")
+        # RFC 8785 §3.2.3: sort keys by UTF-16 code units (not code points).
+        # Comparing UTF-16BE byte strings is equivalent and matches JS Array.sort().
+        sorted_keys = sorted(obj.keys(), key=lambda k: k.encode("utf-16-be"))
+        pairs = [f"{_jcs_string(key)}:{_jcs_serialize(obj[key])}" for key in sorted_keys]
         return "{" + ",".join(pairs) + "}"
     else:
         # Fallback: convert to string
@@ -127,9 +119,43 @@ def _jcs_string(s: str) -> str:
     return "".join(result)
 
 
-def _is_negative_zero(x: float) -> bool:
-    """Check if a float is negative zero."""
-    return x == 0.0 and str(x) == "-0.0"
+def _jcs_number(x: float) -> str:
+    """
+    Serialize a float per RFC 8785 §3.2.2.3 (ECMAScript Number.prototype.toString).
+
+    Python's repr() already yields the shortest round-tripping digits, the same
+    digits ECMAScript uses; only the layout (exponent form, trailing ".0") differs.
+    """
+    if x != x or x in (float("inf"), float("-inf")):
+        raise ValueError("JCS: NaN and Infinity are not valid JSON numbers")
+    if x == 0:
+        return "0"  # RFC 8785: -0 serializes as "0"
+
+    r = repr(x)
+    sign = ""
+    if r.startswith("-"):
+        sign, r = "-", r[1:]
+    mantissa, _, exp_str = r.partition("e")
+    exp = int(exp_str) if exp_str else 0
+    int_part, _, frac_part = mantissa.partition(".")
+    all_digits = int_part + frac_part
+    stripped = all_digits.lstrip("0")
+    # Value = 0.<digits> × 10^n
+    n = len(int_part) + exp - (len(all_digits) - len(stripped))
+    digits = stripped.rstrip("0")
+    k = len(digits)
+
+    if k <= n <= 21:
+        return sign + digits + "0" * (n - k)
+    if 0 < n <= 21:
+        return sign + digits[:n] + "." + digits[n:]
+    if -6 < n <= 0:
+        return sign + "0." + "0" * (-n) + digits
+    e = n - 1
+    exp_out = f"e+{e}" if e >= 0 else f"e-{-e}"
+    if k == 1:
+        return sign + digits + exp_out
+    return sign + digits[0] + "." + digits[1:] + exp_out
 
 
 # ── Merkle Tree ─────────────────────────────────────────────────────────────

@@ -125,11 +125,13 @@ class Metadata:
         d = {}
         if self.description:
             d["description"] = self.description
-        if self.tags:
+        # Lists are kept even when empty, matching the TypeScript SDK (where [] is
+        # truthy). Dropping them would change the signed bytes on a round-trip.
+        if self.tags is not None:
             d["tags"] = self.tags
         if self.ttl is not None:
             d["ttl"] = self.ttl
-        if self.compliance:
+        if self.compliance is not None:
             d["compliance"] = self.compliance
         if self.extra:
             d.update(self.extra)

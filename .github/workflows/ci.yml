@@ -45,6 +45,31 @@ jobs:
         working-directory: sdk/typescript
         run: node --test tests/test_rcpt.mjs
 
+  cross-sdk-interop:
+    # The interop suite skips itself when the TS SDK isn't built, so it needs
+    # its own job that builds TS first. Fails if the tests were skipped.
+    name: Python ↔ TypeScript interop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: pip install cryptography
+      - name: Build TypeScript SDK
+        working-directory: sdk/typescript
+        run: npm install && npx tsc
+      - name: Run interop tests
+        working-directory: sdk/python
+        shell: bash  # explicit shell enables pipefail, so a test failure isn't masked by tee
+        run: |
+          python -m unittest tests.test_interop -v 2>&1 | tee interop.log
+          if grep -q "skipped" interop.log; then echo "Interop tests were skipped"; exit 1; fi
+
   mcp-server:
     name: MCP Server
     runs-on: ubuntu-latest

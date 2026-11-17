@@ -65,8 +65,11 @@ function jcsSerialize(obj: unknown): string {
   if (obj === null || obj === undefined) return "null";
   if (typeof obj === "boolean") return obj ? "true" : "false";
   if (typeof obj === "number") {
-    if (Number.isInteger(obj)) return obj.toString();
-    return JSON.stringify(obj);
+    // RFC 8785 §3.2.2.3: ECMAScript Number.prototype.toString; NaN/Infinity are invalid.
+    if (!Number.isFinite(obj)) {
+      throw new Error("JCS: NaN and Infinity are not valid JSON numbers");
+    }
+    return obj.toString();
   }
   if (typeof obj === "string") return jcsString(obj);
   if (Array.isArray(obj)) {

@@ -154,6 +154,58 @@ console.log(JSON.stringify({{ valid: verifyReceipt(r), id: r.receipt_id }}));
                 f"TypeScript failed to verify chained receipt {receipt.receipt_id}"
             )
 
+    # ── Regression tests: canonical-form edge cases (found 2026-11-17) ──────
+
+    def _ts_verify(self, receipt_json: str) -> bool:
+        script = f"""
+import {{ verifyReceipt, Receipt }} from "{TS_DIST}/index.js";
+console.log(JSON.stringify(verifyReceipt(Receipt.fromJSON({json.dumps(receipt_json)}))));
+"""
+        return json.loads(self._run_node(script))
+
+    def test_python_metadata_extra_typescript_verify(self):
+        """Custom metadata keys (numbers, floats, nulls, nesting) survive TS verification."""
+        cases = {
+            "fractional float": {"confidence": 0.95},
+            "integral float": {"score": 1.0},
+            "small float": {"latency_s": 2.5e-07},
+            "large float": {"tokens": 1e16},
+            "null value": {"note": None},
+            "nested": {"ctx": {"b": [1, 2.0, None], "a": True}},
+        }
+        client = RCPTClient()
+        for name, extra in cases.items():
+            with self.subTest(name):
+                r = client.attest(
+                    action_type=ActionType.INFERENCE, output="x",
+                    metadata={"description": "t", **extra},
+                )
+                self.assertTrue(client.verify(r))
+                self.assertTrue(self._ts_verify(r.to_json()), f"TS rejected Python receipt ({name})")
+
+    def test_typescript_metadata_python_verify(self):
+        """TS receipts with empty lists and custom metadata verify in Python."""
+        script = f"""
+import {{ RCPTClient, ActionType }} from "{TS_DIST}/index.js";
+const c = new RCPTClient();
+const r = c.attest({{ actionType: ActionType.INFERENCE, output: "x",
+  metadata: {{ description: "t", tags: [], compliance: [], score: 1, note: null, ratio: 0.5 }} }});
+console.log(r.toJSON());
+"""
+        receipt = Receipt.from_json(self._run_node(script))
+        self.assertTrue(RCPTClient().verify(receipt), "Python rejected TS receipt with empty lists/extra metadata")
+
+    def test_jcs_number_and_null_interop(self):
+        """Python and TS produce byte-identical JCS for numbers, nulls and non-ASCII keys."""
+        obj = {"f1": 1.0, "f2": 0.95, "f3": 1e-7, "f4": 1e16, "f5": 1e21, "f6": -0.0,
+               "f7": 123.456, "n": None, "é": 1, "\U0001F600": 2, "ﬁ": 3}
+        python_canonical = canonical_serialize(obj).decode("utf-8")
+        script = f"""
+import {{ canonicalSerialize }} from "{TS_DIST}/index.js";
+console.log(canonicalSerialize(JSON.parse({json.dumps(json.dumps(obj))})).toString("utf-8"));
+"""
+        self.assertEqual(python_canonical, self._run_node(script))
+
 
 if __name__ == "__main__":
     unittest.main()

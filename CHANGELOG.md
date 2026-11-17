@@ -2,6 +2,38 @@
 
 All notable changes to the RCPT Protocol are documented here.
 
+## [Unreleased]
+
+### Fixed — cross-SDK verification (Python ↔ TypeScript)
+
+Receipts carrying custom metadata or certain values verified in the SDK that
+signed them but **failed** in the other SDK. All four causes are fixed:
+
+- **TypeScript dropped custom metadata keys** in `Receipt.toDict()`, so any
+  Python receipt with `Metadata.extra` (e.g. `{"confidence": 0.95}`) failed TS
+  verification. The 0.1.1 note that `extra` was preserved "in both SDKs" was
+  only true for Python.
+- **Python JCS omitted `null` values**; RFC 8785 and the TS SDK keep them.
+- **Python JCS used `repr()` for floats** (`1.0`, `1e-07`, `1e+16`) instead of
+  the ECMAScript form RFC 8785 requires (`1`, `1e-7`, `10000000000000000`).
+- **Python dropped empty `tags` / `compliance` lists**, so TS receipts with
+  `tags: []` failed Python verification.
+- Python JCS now sorts keys by UTF-16 code units (RFC 8785 §3.2.3), and both
+  SDKs reject NaN/Infinity instead of emitting invalid JSON.
+
+**Compatibility:** receipts signed by the Python SDK whose metadata contains
+integral floats (`1.0`), exponent-form floats or `null` values were signed over
+non-standard bytes and will no longer verify. Receipts without such values are
+unaffected.
+
+### Tests
+- `tests/test_jcs.py` — RFC 8785 number and key-ordering vectors (runs without Node).
+- 3 new cross-language regression tests in `tests/test_interop.py`.
+- CI: new `cross-sdk-interop` job builds the TS SDK and fails if the interop
+  suite is skipped. Previously the interop tests were always skipped in CI
+  because the TS SDK was never built in the Python job.
+- Totals: 209 Python, 64 TypeScript, 19 MCP — 292 tests, 0 failures, 0 skipped.
+
 ## [0.1.1] — 2026-03-28
 
 ### Breaking Changes

@@ -59,6 +59,8 @@ export interface Metadata {
   [key: string]: unknown;
 }
 
+const KNOWN_METADATA_KEYS = new Set(["description", "tags", "ttl", "compliance"]);
+
 // ── Receipt ────────────────────────────────────────────────────────────────
 
 export interface ReceiptData {
@@ -177,6 +179,11 @@ export class Receipt implements ReceiptData {
       if (this.metadata.tags) meta.tags = this.metadata.tags;
       if (this.metadata.ttl !== undefined) meta.ttl = this.metadata.ttl;
       if (this.metadata.compliance) meta.compliance = this.metadata.compliance;
+      // Preserve custom metadata keys (the Python SDK's Metadata.extra). Dropping
+      // them changes the signed bytes, so receipts carrying them would not verify.
+      for (const [key, value] of Object.entries(this.metadata)) {
+        if (!KNOWN_METADATA_KEYS.has(key) && value !== undefined) meta[key] = value;
+      }
       if (Object.keys(meta).length > 0) d.metadata = meta;
     }
 
